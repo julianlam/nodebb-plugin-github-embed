@@ -1,0 +1,24 @@
+{
+  "name": "nodebb-plugin-github-embed",
+  "version": "0.0.0",
+  "description": "Turns issue numbers (#1234) into dynamic entities in posts",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julianlam/nodebb-plugin-github-embed"
+  },
+  "keywords": [
+    "nodebb",
+    "plugin",
+    "github"
+  ],
+  "author": "Julian Lam <julian@designcreateplay.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/julianlam/nodebb-plugin-github-embed/issues"
+  },
+  "dependencies": {
+    "lru-cache": "^2.5.0",
+    "request": "^2.34.0"
+  }
+}
