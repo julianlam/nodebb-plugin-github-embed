@@ -5,60 +5,82 @@ var	request = require('request'),
     }),
     async = module.parent.require('async'),
     winston = module.parent.require('winston'),
+    S = module.parent.require('string'),
+    meta = module.parent.require('./meta'),
 
-    repo = 'designcreateplay/NodeBB',
     issueRegex = /(?:^|[\s])(#\d+)/g,
-    // repoIssueRegex = /abc/g,
-    Embed = {};
+    repoIssueRegex = /\b\w+\/\w+#\d+\b/g,
+    Embed = {},
+    defaultRepo;
+
+Embed.init = function(app, middleware, controllers) {
+    function render(req, res, next) {
+        res.render('admin/plugins/github-embed', {});
+    }
+
+    app.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
+    app.get('/api/admin/plugins/github-embed', render);
+};
+
+Embed.buildMenu = function(custom_header, callback) {
+    custom_header.plugins.push({
+        "route": '/plugins/github-embed',
+        "icon": 'fa-github',
+        "name": 'GitHub Embed'
+    });
+
+    callback(null, custom_header);
+}
 
 Embed.parse = function(raw, callback) {
-    var issues = [];
+    var issueKeys = [];
 
-    while (match = issueRegex.exec(raw)) {
-        if (issues.indexOf(match[1]) === -1) {
-            issues.push(match[1]);
+    // Issues only
+    if (defaultRepo !== undefined) {
+        while (match = issueRegex.exec(raw)) {
+            if (issueKeys.indexOf(match[1]) === -1) {
+                issueKeys.push(defaultRepo + match[1]);
+            }
         }
     }
 
-    async.map(issues, function(issue, next) {
-        var cacheKey = repo + '/' + issue;
+    // Repo+issue match
+    issueKeys = issueKeys.concat(raw.match(repoIssueRegex) || []);
 
-        if (cache.has(cacheKey)) {
-            console.log('cache hit!', cacheKey);
-            next(null, cache.get(cacheKey));
+    async.map(issueKeys, function(issueKey, next) {
+        if (cache.has(issueKey)) {
+            next(null, cache.get(issueKey));
         } else {
-            console.log('cache miss!', cacheKey);
-            request.get({
-                url: 'https://api.github.com/repos/designcreateplay/NodeBB/issues/' + issue.slice(1),
-                headers: {
-                    'User-Agent': 'julianlam'
+            getIssueData(issueKey, function(err, issueObj) {
+                if (err) {
+                    return next(err);
                 }
-            }, function(err, response, body) {
-                if (response.statusCode === 200) {
-                    var issue = JSON.parse(body),
-                        returnData = {
-                            url: issue.html_url,
-                            title: issue.title,
-                            description: issue.body,
-                            user: {
-                                login: issue.user.login,
-                                url: issue.user.html_url,
-                                picture: issue.user.avatar_url
-                            }
-                        };
 
-                    cache.set(cacheKey, returnData);
-                    next(null, returnData);
-                } else {
-                    next(err);
-                }
+                cache.set(issueKey, issueObj);
+                next(err, issueObj);
             });
         }
     }, function(err, issues) {
         if (!err) {
+            // Filter out non-existant issues
+            issues = issues.filter(function(issue) {
+                return issue;
+            });
+
             var parsed = issues.reduce(function(content, issueObj) {
-                    // console.log('parsing', issueObj);
-                    return content += '<div class="github-issue"><h3>' + issueObj.title + '</h3><img class="author-picture" src="' + issueObj.user.picture + '" title="' + issueObj.user.login + '" /><p>' + issueObj.description + '</p></div>';
+                    return content += '<div class="github-issue panel panel-default"> \
+                        <div class="panel-body"> \
+                            <div class="meta"> \
+                                <img class="author-picture" src="' + issueObj.user.picture + '" title="' + issueObj.user.login + '" /> \
+                                <a href="' + issueObj.user.url + '"><span class="username">' + issueObj.user.login + '</span></a> created this issue <span class="timeago" title="' + issueObj.created + '"></span> in <a href="//github.com/' + issueObj.repo + '">' + issueObj.repo + '</a> \
+                            </div> \
+                            <h3> \
+                                <span class="label label-default ' + issueObj.state + ' pull-right">' + issueObj.state + '</span> \
+                                <a href="' + issueObj.url + '">' + issueObj.title + '</a> \
+                                <span class="number">#' + issueObj.number + '</span> \
+                            </h3> \
+                            </div> \
+                        </div>';
                 }, raw);
 
             callback(null, parsed);
@@ -68,5 +90,45 @@ Embed.parse = function(raw, callback) {
         }
     });
 };
+
+var getIssueData = function(issueKey, callback) {
+    var issueData = issueKey.split('#'),
+        repo = issueData[0],
+        issueNum = issueData[1];
+
+    request.get({
+        url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum,
+        headers: {
+            'User-Agent': 'julianlam'
+        }
+    }, function(err, response, body) {
+        if (response.statusCode === 200) {
+            var issue = JSON.parse(body),
+                returnData = {
+                    repo: repo,
+                    number: issue.number,
+                    url: issue.html_url,
+                    title: issue.title,
+                    state: issue.state,
+                    // description: issue.body,
+                    created: issue.created_at,
+                    user: {
+                        login: issue.user.login,
+                        url: issue.user.html_url,
+                        picture: issue.user.avatar_url
+                    }
+                };
+
+            callback(null, returnData);
+        } else {
+            callback(err);
+        }
+    });
+}
+
+// Initial setup
+meta.settings.get('github-embed', function(err, settings) {
+    defaultRepo = settings.defaultRepo
+});
 
 module.exports = Embed;

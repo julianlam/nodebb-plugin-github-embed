@@ -4,8 +4,14 @@
     "description": "Turns issue numbers (#1234) into dynamic entities in posts",
     "url": "https://github.com/julianlam/nodebb-plugin-github-embed",
     "library": "./index.js",
+    "templates": "templates",
+    "less": [
+        "less/default.less"
+    ],
     "hooks": [
-        { "hook": "filter:post.parse", "method": "parse", "priority": 6 }
+        { "hook": "filter:post.parse", "method": "parse", "priority": 6 },
+        { "hook": "action:app.load", "method": "init" },
+        { "hook": "filter:admin.header.build", "method": "buildMenu" }
     ],
     "minver": "0.4.0"
 }

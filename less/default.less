@@ -1,0 +1,50 @@
+.github-issue {
+	font: 13px Helvetica, arial, freesans, clean, sans-serif;
+
+	a {
+		color: #333;
+		text-decoration: none;
+	}
+
+	h3 {
+		font-size: 16px;
+		margin: 0;
+		font-weight: bold;
+		color: #333;
+
+		span.label {
+			color: white;
+			.border-radius(2px);
+			font-size: 11px;
+			padding: 3px 4px;
+
+			&.closed {
+				background: #bd2c00;
+			}
+
+			&.open {
+				background: #009800;
+			}
+		}
+
+		span.number {
+			font-weight: normal;
+			color: #777;
+		}
+	}
+
+	.meta {
+		color: #777;
+		margin-bottom: 2px;
+
+		.username {
+			font-weight: bold;
+		}
+
+		img {
+			float: left;
+			width: 16px;
+			margin-right: 0.5em;
+		}
+	}
+}
