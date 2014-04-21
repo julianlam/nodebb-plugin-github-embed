@@ -10,13 +10,15 @@ var	request = require('request'),
 
     issueRegex = /(?:^|[\s])(?:\w+\/\w+)?#\d+\b/g,
     Embed = {},
-    defaultRepo;
+    defaultRepo,
+    appModule;
 
 Embed.init = function(app, middleware, controllers) {
     function render(req, res, next) {
         res.render('admin/plugins/github-embed', {});
     }
 
+    appModule = app;
     app.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
     app.get('/api/admin/plugins/github-embed', render);
 };
@@ -73,23 +75,12 @@ Embed.parse = function(raw, callback) {
                 return issue;
             });
 
-            var parsed = issues.reduce(function(content, issueObj) {
-                    return content += '<div class="github-issue panel panel-default"> \
-                        <div class="panel-body"> \
-                            <div class="meta"> \
-                                <img class="author-picture" src="' + issueObj.user.picture + '" title="' + issueObj.user.login + '" /> \
-                                <a href="' + issueObj.user.url + '"><span class="username">' + issueObj.user.login + '</span></a> created this issue <span class="timeago" title="' + issueObj.created + '"></span> in <a href="//github.com/' + issueObj.repo + '">' + issueObj.repo + '</a> \
-                            </div> \
-                            <h3> \
-                                <span class="label label-default ' + issueObj.state + ' pull-right">' + issueObj.state + '</span> \
-                                <a href="' + issueObj.url + '">' + issueObj.title + '</a> \
-                                <span class="number">#' + issueObj.number + '</span> \
-                            </h3> \
-                            </div> \
-                        </div>';
-                }, raw);
-
-            callback(null, parsed);
+            console.log(issues);
+            appModule.render('partials/issues-block', {
+                issues: issues
+            }, function(err, cardHTML) {
+                callback(null, raw += cardHTML);
+            });
         } else {
             winston.warn('Encountered an error parsing GitHub embed codes, not continuing');
             callback(null, raw);
@@ -108,6 +99,7 @@ var getIssueData = function(issueKey, callback) {
             'User-Agent': 'julianlam'
         }
     }, function(err, response, body) {
+        console.log(response.statusCode, body);
         if (response.statusCode === 200) {
             var issue = JSON.parse(body),
                 returnData = {
