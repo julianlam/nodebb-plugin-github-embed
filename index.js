@@ -8,8 +8,7 @@ var	request = require('request'),
     S = module.parent.require('string'),
     meta = module.parent.require('./meta'),
 
-    issueRegex = /(?:^|[\s])(#\d+)/g,
-    repoIssueRegex = /\b\w+\/\w+#\d+\b/g,
+    issueRegex = /(?:^|[\s])(?:\w+\/\w+)?#\d+\b/g,
     Embed = {},
     defaultRepo;
 
@@ -33,19 +32,26 @@ Embed.buildMenu = function(custom_header, callback) {
 }
 
 Embed.parse = function(raw, callback) {
-    var issueKeys = [];
+    var issueKeys = [],
+        ltrimRegex = /^\s+/,
+        matches, cleanedText;
 
-    // Issues only
-    if (defaultRepo !== undefined) {
-        while (match = issueRegex.exec(raw)) {
-            if (issueKeys.indexOf(match[1]) === -1) {
-                issueKeys.push(defaultRepo + match[1]);
+    cleanedText = S(raw).stripTags().s;
+    matches = cleanedText.match(issueRegex);
+
+    if (matches && matches.length) {
+        matches.forEach(function(match) {
+            match = match.replace(ltrimRegex, '');
+
+            if (match[0] === '#' && defaultRepo !== undefined) {
+                match = defaultRepo + match;
             }
-        }
-    }
 
-    // Repo+issue match
-    issueKeys = issueKeys.concat(raw.match(repoIssueRegex) || []);
+            if (issueKeys.indexOf(match) === -1) {
+                issueKeys.push(match);
+            }
+        });
+    }
 
     async.map(issueKeys, function(issueKey, next) {
         if (cache.has(issueKey)) {
