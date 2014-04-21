@@ -75,7 +75,6 @@ Embed.parse = function(raw, callback) {
                 return issue;
             });
 
-            console.log(issues);
             appModule.render('partials/issues-block', {
                 issues: issues
             }, function(err, cardHTML) {
@@ -99,7 +98,6 @@ var getIssueData = function(issueKey, callback) {
             'User-Agent': 'julianlam'
         }
     }, function(err, response, body) {
-        console.log(response.statusCode, body);
         if (response.statusCode === 200) {
             var issue = JSON.parse(body),
                 returnData = {
