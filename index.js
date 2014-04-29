@@ -1,8 +1,4 @@
 var	request = require('request'),
-    cache = require('lru-cache')({
-        maxAge: 1000*60*60*24,  // One day
-        max: 100
-    }),
     async = module.parent.require('async'),
     winston = module.parent.require('winston'),
     S = module.parent.require('string'),
@@ -10,8 +6,7 @@ var	request = require('request'),
 
     issueRegex = /(?:^|[\s])(?:[\w\d\-]+\/[\w\d\-]+)?#\d+\b/gm,
     Embed = {},
-    defaultRepo,
-    appModule;
+    cache, defaultRepo, tokenString, appModule;
 
 Embed.init = function(app, middleware, controllers) {
     function render(req, res, next) {
@@ -93,7 +88,7 @@ var getIssueData = function(issueKey, callback) {
         issueNum = issueData[1];
 
     request.get({
-        url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum,
+        url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + tokenString,
         headers: {
             'User-Agent': 'julianlam'
         }
@@ -120,11 +115,20 @@ var getIssueData = function(issueKey, callback) {
             callback(err);
         }
     });
-}
+};
 
 // Initial setup
 meta.settings.get('github-embed', function(err, settings) {
-    defaultRepo = settings.defaultRepo
+    defaultRepo = settings.defaultRepo;
+
+    cache = require('lru-cache')({
+        maxAge: 1000*60*60*(settings.cacheHours || 6),
+        max: 100
+    });
+
+    if (settings.clientId && settings.clientSecret) {
+        tokenString = '?client_id=' + settings.clientId + '&client_secret=' + settings.clientSecret;
+    }
 });
 
 module.exports = Embed;
