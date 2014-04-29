@@ -8,7 +8,7 @@ var	request = require('request'),
     S = module.parent.require('string'),
     meta = module.parent.require('./meta'),
 
-    issueRegex = /(?:^|[\s])(?:\w+\/\w+)?#\d+\b/g,
+    issueRegex = /(?:^|[\s])(?:[\w\d\-]+\/[\w\d\-]+)?#\d+\b/gm,
     Embed = {},
     defaultRepo,
     appModule;
@@ -31,14 +31,14 @@ Embed.buildMenu = function(custom_header, callback) {
     });
 
     callback(null, custom_header);
-}
+};
 
 Embed.parse = function(raw, callback) {
     var issueKeys = [],
         ltrimRegex = /^\s+/,
         matches, cleanedText;
 
-    cleanedText = S(raw).stripTags().s;
+    cleanedText = S(raw.replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
     matches = cleanedText.match(issueRegex);
 
     if (matches && matches.length) {
