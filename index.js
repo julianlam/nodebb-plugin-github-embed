@@ -1,10 +1,12 @@
+/* jshint indent: 4 */
+
 var	request = require('request'),
     async = module.parent.require('async'),
     winston = module.parent.require('winston'),
     S = module.parent.require('string'),
     meta = module.parent.require('./meta'),
 
-    issueRegex = /(?:^|[\s])(?:[\w\d\-]+\/[\w\d\-]+)?#\d+\b/gm,
+    issueRegex = /(?:^|[\s])(?:[\w\d\-]+\/[\w\d\-]+|gh|GH)#\d+\b/gm,
     Embed = {},
     cache, defaultRepo, tokenString, appModule;
 
@@ -40,8 +42,8 @@ Embed.parse = function(raw, callback) {
         matches.forEach(function(match) {
             match = match.replace(ltrimRegex, '');
 
-            if (match[0] === '#' && defaultRepo !== undefined) {
-                match = defaultRepo + match;
+            if (match.slice(0, 2).toLowerCase() === 'gh' && defaultRepo !== undefined) {
+                match = defaultRepo + match.slice(2);
             }
 
             if (issueKeys.indexOf(match) === -1) {
