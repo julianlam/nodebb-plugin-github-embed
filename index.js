@@ -6,7 +6,7 @@ var	request = require('request'),
     S = module.parent.require('string'),
     meta = module.parent.require('./meta'),
 
-    issueRegex = /(?:^|[\s])(?:[\w\d\-]+\/[\w\d\-]+|gh|GH)#\d+\b/gm,
+    issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
     Embed = {},
     cache, defaultRepo, tokenString, appModule;
 
