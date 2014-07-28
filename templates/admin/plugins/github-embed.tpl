@@ -6,7 +6,7 @@
 			<div class="form-group">
 				<label for="defaultRepo">Default Repository</label>
 				<input type="text" class="form-control" id="defaultRepo" name="defaultRepo" placeholder="NodeBB/NodeBB" />
-				<span class="help-block">The default repository value is optional, but would allow you to reference issues simply by providing the issue number (e.g. #1234). This field expects the repository owner and repository name, separated by a forward slash (/).</span>
+				<span class="help-block">The default repository value is optional, but would allow you to reference issues simply by providing the issue number (e.g. gh#1234). This field expects the repository owner and repository name, separated by a forward slash (/).</span>
 			</div>
 		</div>
 		<div class="col-sm-6">
