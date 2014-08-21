@@ -8,7 +8,7 @@ var	request = require('request'),
 
     issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
     Embed = {},
-    cache, defaultRepo, tokenString, appModule;
+    cache, defaultRepo, tokenString, personalAccessToken, appModule;
 
 Embed.init = function(app, middleware, controllers) {
     function render(req, res, next) {
@@ -87,14 +87,22 @@ Embed.parse = function(raw, callback) {
 var getIssueData = function(issueKey, callback) {
     var issueData = issueKey.split('#'),
         repo = issueData[0],
-        issueNum = issueData[1];
+        issueNum = issueData[1],
+        reqOpts = {
+            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + tokenString,
+            headers: {
+                'User-Agent': 'nodebb-plugin-github-embed'
+            }
+        };
 
-    request.get({
-        url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + tokenString,
-        headers: {
-            'User-Agent': 'julianlam'
+        if (personalAccessToken) {
+            reqOpts.auth = {
+                user: personalAccessToken,
+                pass: 'x-oauth-basic'
+            };
         }
-    }, function(err, response, body) {
+
+    request.get(reqOpts, function(err, response, body) {
         if (response.statusCode === 200) {
             var issue = JSON.parse(body),
                 returnData = {
@@ -130,6 +138,10 @@ meta.settings.get('github-embed', function(err, settings) {
 
     if (settings.clientId && settings.clientSecret) {
         tokenString = '?client_id=' + settings.clientId + '&client_secret=' + settings.clientSecret;
+    }
+
+    if (settings.personalAccessToken) {
+        personalAccessToken = settings.personalAccessToken;
     }
 });
 
