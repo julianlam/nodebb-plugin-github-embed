@@ -10,7 +10,7 @@ var	request = require('request'),
     Embed = {},
     cache, defaultRepo, tokenString, personalAccessToken, appModule;
 
-Embed.init = function(app, middleware, controllers) {
+Embed.init = function(app, middleware, controllers, callback) {
     function render(req, res, next) {
         res.render('admin/plugins/github-embed', {});
     }
@@ -18,6 +18,8 @@ Embed.init = function(app, middleware, controllers) {
     appModule = app;
     app.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
     app.get('/api/admin/plugins/github-embed', render);
+
+    callback();
 };
 
 Embed.buildMenu = function(custom_header, callback) {

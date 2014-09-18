@@ -10,8 +10,8 @@
     ],
     "hooks": [
         { "hook": "filter:post.parse", "method": "parse", "priority": 6 },
-        { "hook": "action:app.load", "method": "init" },
+        { "hook": "static:app.load", "method": "init" },
         { "hook": "filter:admin.header.build", "method": "buildMenu" }
     ],
-    "minver": "0.4.0"
+    "compatibility": "~0.5.1"
 }
