@@ -105,7 +105,10 @@ var getIssueData = function(issueKey, callback) {
         }
 
     request.get(reqOpts, function(err, response, body) {
-        if (response.statusCode === 200) {
+        if (err) {
+            return callback(err);
+        }
+        if (response && response.statusCode === 200) {
             var issue = JSON.parse(body),
                 returnData = {
                     repo: repo,
@@ -123,9 +126,7 @@ var getIssueData = function(issueKey, callback) {
                 };
 
             callback(null, returnData);
-        } else {
-            callback(err);
-        }
+        } 
     });
 };
 
