@@ -9,9 +9,9 @@
         "less/default.less"
     ],
     "hooks": [
-        { "hook": "filter:post.parse", "method": "parse", "priority": 6 },
+        { "hook": "filter:parse.post", "method": "parse" },
+        { "hook": "filter:parse.raw", "method": "parse" },
         { "hook": "static:app.load", "method": "init" },
         { "hook": "filter:admin.header.build", "method": "buildMenu" }
-    ],
-    "compatibility": "~0.5.1"
+    ]
 }
