@@ -10,14 +10,14 @@ var	request = require('request'),
     Embed = {},
     cache, defaultRepo, tokenString, personalAccessToken, appModule;
 
-Embed.init = function(app, middleware, controllers, callback) {
+Embed.init = function(data, callback) {
     function render(req, res, next) {
         res.render('admin/plugins/github-embed', {});
     }
 
-    appModule = app;
-    app.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
-    app.get('/api/admin/plugins/github-embed', render);
+    appModule = data.router;
+    data.router.get('/admin/plugins/github-embed', data.middleware.admin.buildHeader, render);
+    data.router.get('/api/admin/plugins/github-embed', render);
 
     callback();
 };
@@ -32,12 +32,13 @@ Embed.buildMenu = function(custom_header, callback) {
     callback(null, custom_header);
 };
 
-Embed.parse = function(raw, callback) {
+Embed.parse = function(data, callback) {
     var issueKeys = [],
         ltrimRegex = /^\s+/,
-        matches, cleanedText;
+        raw = typeof data !== 'object',
+        matches, cleanedText,
 
-    cleanedText = S(raw.replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
+    cleanedText = S((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
     matches = cleanedText.match(issueRegex);
 
     if (matches && matches.length) {
@@ -77,11 +78,16 @@ Embed.parse = function(raw, callback) {
             appModule.render('partials/issues-block', {
                 issues: issues
             }, function(err, cardHTML) {
-                callback(null, raw += cardHTML);
+                if (raw) {
+                    var payload = data += cardHTML;
+                } else {
+                    data.postData.content += cardHTML;
+                }
+                callback(null, payload || data);
             });
         } else {
             winston.warn('Encountered an error parsing GitHub embed codes, not continuing');
-            callback(null, raw);
+            callback(null, data);
         }
     });
 };
