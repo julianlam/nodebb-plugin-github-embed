@@ -7,6 +7,7 @@ var	request = require('request'),
     meta = module.parent.require('./meta'),
 
     issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
+    fullUrlRegex = /https:\/\/github.com\/([\w]+\/[\w]+)\/issues\/([\d]+)/g,
     Embed = {},
     cache, defaultRepo, tokenString, personalAccessToken, appModule;
 
@@ -36,10 +37,12 @@ Embed.parse = function(data, callback) {
     var issueKeys = [],
         ltrimRegex = /^\s+/,
         raw = typeof data !== 'object',
-        matches, cleanedText,
+        fullUrlMatch = {},
+        matches, cleanedText;
 
     cleanedText = S((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
     matches = cleanedText.match(issueRegex);
+    fullUrlMatches = cleanedText.match(fullUrlRegex);
 
     if (matches && matches.length) {
         matches.forEach(function(match) {
@@ -58,6 +61,13 @@ Embed.parse = function(data, callback) {
                 issueKeys.push(match);
             }
         });
+    }
+
+    while(fullUrlMatch.obj = fullUrlRegex.exec(cleanedText)) {
+        fullUrlMatch.repo = fullUrlMatch.obj[1];
+        fullUrlMatch.issue = fullUrlMatch.obj[2];
+
+        issueKeys.push([fullUrlMatch.repo, fullUrlMatch.issue].join('#'));
     }
 
     async.map(issueKeys, function(issueKey, next) {
@@ -102,7 +112,7 @@ var getIssueData = function(issueKey, callback) {
         repo = issueData[0],
         issueNum = issueData[1],
         reqOpts = {
-            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + tokenString,
+            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + (tokenString || ''),
             headers: {
                 'User-Agent': 'nodebb-plugin-github-embed'
             }

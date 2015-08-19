@@ -25,7 +25,7 @@
 						<input type="text" class="form-control" id="clientSecret" name="clientSecret" placeholder="Client Secret" />
 					</div>
 				</div>
-				<span class="help-block">Optional. Without a client ID/secret pair, requests are rate-limited to one per minute.</span>
+				<span class="help-block">Optional. Without a client ID/secret pair, requests are rate-limited to one request per second.</span>
 			</div>
 			<div class="form-group">
 				<label for="personalAccessToken">Personal Access Token</label>
