@@ -204,7 +204,10 @@ var getIssueData = function(issueKey, callback) {
                 };
 
             callback(null, returnData);
-        } 
+        } else if (response.statusCode === 404) {
+            winston.verbose('[plugins/github-embed] No matching issue ' + issueNum + ' in repository ' + repo);
+            callback();
+        }
     });
 };
 
