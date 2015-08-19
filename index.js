@@ -1,4 +1,6 @@
 /* jshint indent: 4 */
+'use strict';
+/* globals require, module */
 
 var	request = require('request'),
     async = module.parent.require('async'),
@@ -12,7 +14,7 @@ var	request = require('request'),
     cache, defaultRepo, tokenString, personalAccessToken, appModule;
 
 Embed.init = function(data, callback) {
-    function render(req, res, next) {
+    function render(req, res) {
         res.render('admin/plugins/github-embed', {});
     }
 
@@ -25,9 +27,9 @@ Embed.init = function(data, callback) {
 
 Embed.buildMenu = function(custom_header, callback) {
     custom_header.plugins.push({
-        "route": '/plugins/github-embed',
-        "icon": 'fa-github',
-        "name": 'GitHub Embed'
+        'route': '/plugins/github-embed',
+        'icon': 'fa-github',
+        'name': 'GitHub Embed'
     });
 
     callback(null, custom_header);
@@ -42,7 +44,6 @@ Embed.parse = function(data, callback) {
 
     cleanedText = S((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
     matches = cleanedText.match(issueRegex);
-    fullUrlMatches = cleanedText.match(fullUrlRegex);
 
     if (matches && matches.length) {
         matches.forEach(function(match) {
@@ -90,11 +91,13 @@ Embed.parse = function(data, callback) {
                 return issue;
             });
 
+            var payload;
+
             appModule.render('partials/issues-block', {
                 issues: issues
             }, function(err, cardHTML) {
                 if (raw) {
-                    var payload = data += cardHTML;
+                    payload = data += cardHTML;
                 } else {
                     data.postData.content += cardHTML;
                 }
