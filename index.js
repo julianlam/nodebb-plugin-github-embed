@@ -45,11 +45,16 @@ Embed.parse = function(data, callback) {
         matches.forEach(function(match) {
             match = match.replace(ltrimRegex, '');
 
-            if (match.slice(0, 2).toLowerCase() === 'gh' && defaultRepo !== undefined) {
-                match = defaultRepo + match.slice(2);
+            if (match.slice(0, 2).toLowerCase() === 'gh') {
+                if (defaultRepo !== undefined) {
+                    match = defaultRepo + match.slice(2);
+                } else {
+                    // If a defaultRepo is not defined, skip this match.
+                    match = null;
+                }
             }
 
-            if (issueKeys.indexOf(match) === -1) {
+            if (match !== null && issueKeys.indexOf(match) === -1) {
                 issueKeys.push(match);
             }
         });
