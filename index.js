@@ -234,8 +234,10 @@ var getCommitData = function(commitKey, callback) {
             return callback(err);
         }
         if (response && response.statusCode === 200) {
-            var commit = JSON.parse(body),
-                returnData = {
+            var commit = JSON.parse(body);
+            commit.author = commit.author || {};
+            
+            var returnData = {
                     type: {
                         issue: false,
                         commit: true
