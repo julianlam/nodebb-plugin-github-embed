@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-github-embed",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Turns issue numbers (#1234) into dynamic entities in posts",
   "main": "index.js",
   "repository": {
