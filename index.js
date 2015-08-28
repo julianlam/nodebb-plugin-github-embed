@@ -141,18 +141,22 @@ Embed.parse = function(data, callback) {
             payload.issues = payload.issues.filter(Boolean);
             payload.commits = payload.commits.filter(Boolean);
 
-            var returnString;
+            var embeds = payload.issues.concat(payload.commits);
 
-            appModule.render('partials/embed-block', {
-                embeds: payload.issues.concat(payload.commits)
-            }, function(err, cardHTML) {
-                if (raw) {
-                    returnString = data += cardHTML;
-                } else {
-                    data.postData.content += cardHTML;
-                }
-                callback(null, returnString || data);
-            });
+            if (embeds.length) {
+                appModule.render('partials/embed-block', {
+                    embeds: embeds
+                }, function(err, cardHTML) {
+                    if (raw) {
+                        data = data += cardHTML;
+                    } else {
+                        data.postData.content += cardHTML;
+                    }
+                    callback(null, data);
+                });
+            } else {
+                callback(null, data);
+            }
         } else {
             winston.warn('Encountered an error parsing GitHub embed codes, not continuing');
             callback(null, data);
