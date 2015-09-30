@@ -196,7 +196,7 @@ var getIssueData = function(issueKey, callback) {
                     repo: repo,
                     number: issue.number,
                     url: issue.html_url,
-                    title: issue.title,
+                    title: S(issue.title).escapeHTML().s,
                     state: issue.state,
                     // description: issue.body,
                     created: issue.created_at,
@@ -249,7 +249,7 @@ var getCommitData = function(commitKey, callback) {
                     repo: repo,
                     sha: commit.sha,
                     url: commit.html_url,
-                    message: commit.commit.message,
+                    message: S(commit.commit.message).escapeHTML().s,
                     created: commit.commit.author.date,
                     commentCount: commit.commit.comment_count,
                     user: {
