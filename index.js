@@ -1,14 +1,15 @@
-/* jshint indent: 4 */
 'use strict';
 /* globals require, module */
 
 var	request = require('request'),
     async = module.parent.require('async'),
     winston = module.parent.require('winston'),
-    S = module.parent.require('string'),
-    meta = module.parent.require('./meta'),
+    meta = module.parent.require('./meta');
 
-    issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
+var escape = require('escape-html');
+var striptags = require('striptags');
+
+var issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
     commitRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)@[A-Fa-f0-9]{7,}\b/gm,
     fullUrlIssueRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/issues\/([\d]+)/g,
     fullUrlCommitRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/commit\/([A-Fa-f0-9]{7,})/g,
@@ -46,7 +47,7 @@ Embed.parse = function(data, callback) {
         fullUrlCommitMatch = {},
         issueMatches, commitMatches, cleanedText;
 
-    cleanedText = S((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, '')).stripTags().s;
+    cleanedText = striptags((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, ''));
     issueMatches = cleanedText.match(issueRegex);
     commitMatches = cleanedText.match(commitRegex);
 
@@ -196,7 +197,7 @@ var getIssueData = function(issueKey, callback) {
                     repo: repo,
                     number: issue.number,
                     url: issue.html_url,
-                    title: S(issue.title).escapeHTML().s,
+                    title: escape(issue.title),
                     state: issue.state,
                     // description: issue.body,
                     created: issue.created_at,
@@ -249,7 +250,7 @@ var getCommitData = function(commitKey, callback) {
                     repo: repo,
                     sha: commit.sha,
                     url: commit.html_url,
-                    message: S(commit.commit.message).escapeHTML().s,
+                    message: escape(commit.commit.message),
                     created: commit.commit.author.date,
                     commentCount: commit.commit.comment_count,
                     user: {

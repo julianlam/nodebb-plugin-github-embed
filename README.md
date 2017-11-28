@@ -9,7 +9,3 @@ Turns issue numbers (#1234) into dynamic entities in posts
 ``` bash
 npm install nodebb-plugin-github-embed
 ```
-
-# Requirements
-
-* NodeBB v0.4.0 or greater
