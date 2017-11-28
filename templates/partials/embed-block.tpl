@@ -5,7 +5,7 @@
             <div class="github-embed panel panel-default">
                 <div class="panel-body">
                     <div class="meta">
-                        <img class="author-picture" src="{embeds.user.picture}" title="{embeds.user.login}" />
+                        <img class="author-picture not-responsive" src="{embeds.user.picture}" title="{embeds.user.login}" />
                         <a href="{embeds.user.url}"><span class="username">{embeds.user.login}</span></a> created this issue <span class="timeago" title="{embeds.created}"></span> in <a href="//github.com/{embeds.repo}">{embeds.repo}</a>
                     </div>
                     <h3>
@@ -23,7 +23,7 @@
                 <div class="panel-body">
                     <div class="meta">
                         <span class="pull-right">{embeds.commentCount} <i class="fa fa-comment"></i></span>
-                        <img class="author-picture" src="{embeds.user.picture}" title="{embeds.user.login}" />
+                        <img class="author-picture not-responsive" src="{embeds.user.picture}" title="{embeds.user.login}" />
                         <a href="{embeds.user.url}"><span class="username">{embeds.user.login}</span></a> committed <span class="timeago" title="{embeds.created}"></span> to <a href="//github.com/{embeds.repo}">{embeds.repo}</a>
                     </div>
                     <a href="{embeds.url}"><pre>{embeds.message}</pre></a>
