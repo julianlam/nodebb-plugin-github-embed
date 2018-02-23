@@ -212,6 +212,12 @@ var getIssueData = function(issueKey, callback) {
         } else if (response.statusCode === 404) {
             winston.verbose('[plugins/github-embed] No matching issue ' + issueNum + ' in repository ' + repo);
             callback();
+        } else if (response.statusCode === 410) {
+            winston.verbose('[plugins/github-embed] Issue ' + issueNum + ' in repository ' + repo + ' has been deleted.');
+            callback();
+        } else {
+            winston.warn('[plugins/github-embed] Received HTTP ' + response.statusCode + ' from GitHub (' + issueKey + ')');
+            callback();
         }
     });
 };
