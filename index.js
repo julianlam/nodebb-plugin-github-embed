@@ -1,10 +1,10 @@
 'use strict';
 /* globals require, module */
 
-var	request = require('request'),
-    async = module.parent.require('async'),
-    winston = module.parent.require('winston'),
-    meta = module.parent.require('./meta');
+var request = require('request');
+var async = require.main.require('async');
+var winston = require.main.require('winston');
+var meta = require.main.require('./src/meta');
 
 var escape = require('escape-html');
 var striptags = require('striptags');
