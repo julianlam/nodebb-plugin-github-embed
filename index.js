@@ -12,6 +12,7 @@ var striptags = require('striptags');
 var issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
     commitRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)@[A-Fa-f0-9]{7,}\b/gm,
     fullUrlIssueRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/issues\/([\d]+)/g,
+    fullUrlPRRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/pull\/([\d]+)/g,
     fullUrlCommitRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/commit\/([A-Fa-f0-9]{7,})/g,
     Embed = {},
     issueCache, commitCache, defaultRepo, tokenString, personalAccessToken, appModule;
@@ -44,6 +45,7 @@ Embed.parse = function(data, callback) {
         ltrimRegex = /^\s+/,
         raw = typeof data !== 'object',
         fullUrlIssueMatch = {},
+        fullUrlPRMatch = {},
         fullUrlCommitMatch = {},
         issueMatches, commitMatches, cleanedText;
 
@@ -75,6 +77,13 @@ Embed.parse = function(data, callback) {
         fullUrlIssueMatch.issue = fullUrlIssueMatch.obj[2];
 
         issueKeys.push([fullUrlIssueMatch.repo, fullUrlIssueMatch.issue].join('#'));
+    }
+
+    while(fullUrlPRMatch.obj = fullUrlPRRegex.exec(cleanedText)) {
+        fullUrlPRMatch.repo = fullUrlPRMatch.obj[1];
+        fullUrlPRMatch.issue = fullUrlPRMatch.obj[2];
+
+        issueKeys.push([fullUrlPRMatch.repo, fullUrlPRMatch.issue].join('#'));
     }
 
     if (commitMatches && commitMatches.length) {
@@ -247,7 +256,7 @@ var getCommitData = function(commitKey, callback) {
         if (response && response.statusCode === 200) {
             var commit = JSON.parse(body);
             commit.author = commit.author || {};
-            
+
             var returnData = {
                     type: {
                         issue: false,
