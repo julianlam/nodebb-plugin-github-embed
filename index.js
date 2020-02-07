@@ -15,7 +15,7 @@ var issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
     fullUrlPRRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/pull\/([\d]+)/g,
     fullUrlCommitRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/commit\/([A-Fa-f0-9]{7,})/g,
     Embed = {},
-    issueCache, commitCache, defaultRepo, tokenString, personalAccessToken, appModule;
+    issueCache, commitCache, defaultRepo, personalAccessToken, appModule;
 
 Embed.init = function(data, callback) {
     function render(req, res) {
@@ -179,7 +179,7 @@ var getIssueData = function(issueKey, callback) {
         repo = issueData[0],
         issueNum = issueData[1],
         reqOpts = {
-            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum + (tokenString || ''),
+            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum,
             headers: {
                 'User-Agent': 'nodebb-plugin-github-embed'
             }
@@ -189,6 +189,11 @@ var getIssueData = function(issueKey, callback) {
             reqOpts.auth = {
                 user: personalAccessToken,
                 pass: 'x-oauth-basic'
+            };
+        } else if (Embed.settings.clientId && Embed.settings.clientSecret) {
+            reqOpts.auth = {
+                user: Embed.settings.clientId,
+                pass: Embed.settings.clientSecret,
             };
         }
 
@@ -236,7 +241,7 @@ var getCommitData = function(commitKey, callback) {
         repo = commitData[0],
         hash = commitData[1],
         reqOpts = {
-            url: 'https://api.github.com/repos/' + repo + '/commits/' + hash + (tokenString || ''),
+            url: 'https://api.github.com/repos/' + repo + '/commits/' + hash,
             headers: {
                 'User-Agent': 'nodebb-plugin-github-embed'
             }
@@ -246,6 +251,11 @@ var getCommitData = function(commitKey, callback) {
             reqOpts.auth = {
                 user: personalAccessToken,
                 pass: 'x-oauth-basic'
+            };
+        } else if (Embed.settings.clientId && Embed.settings.clientSecret) {
+            reqOpts.auth = {
+                user: Embed.settings.clientId,
+                pass: Embed.settings.clientSecret,
             };
         }
 
@@ -285,6 +295,7 @@ var getCommitData = function(commitKey, callback) {
 
 // Initial setup
 meta.settings.get('github-embed', function(err, settings) {
+    Embed.settings = settings;
     defaultRepo = settings.defaultRepo;
 
     issueCache = require('lru-cache')({
@@ -296,10 +307,6 @@ meta.settings.get('github-embed', function(err, settings) {
         maxAge: 1000*60*60*(settings.cacheHours || 6),
         max: 100
     });
-
-    if (settings.clientId && settings.clientSecret) {
-        tokenString = '?client_id=' + settings.clientId + '&client_secret=' + settings.clientSecret;
-    }
 
     if (settings.personalAccessToken) {
         personalAccessToken = settings.personalAccessToken;
