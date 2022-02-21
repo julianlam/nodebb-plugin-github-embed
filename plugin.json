@@ -13,5 +13,8 @@
         { "hook": "filter:parse.raw", "method": "parse" },
         { "hook": "static:app.load", "method": "init" },
         { "hook": "filter:admin.header.build", "method": "buildMenu" }
-    ]
+    ],
+    "modules": {
+        "../admin/plugins/github-embed.js": "static/lib/admin.js"
+    }
 }
