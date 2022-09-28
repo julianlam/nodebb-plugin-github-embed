@@ -5,8 +5,8 @@
     "url": "https://github.com/julianlam/nodebb-plugin-github-embed",
     "library": "./index.js",
     "templates": "templates",
-    "less": [
-        "less/default.less"
+    "scss": [
+        "scss/default.scss"
     ],
     "hooks": [
         { "hook": "filter:parse.post", "method": "parse" },
