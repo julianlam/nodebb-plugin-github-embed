@@ -112,7 +112,6 @@ Embed.parse = function(data, callback) {
         commitKeys.push([fullUrlCommitMatch.repo, fullUrlCommitMatch.commit].join('@'));
     }
 
-    console.log(issueKeys, commitKeys);
     async.parallel({
         issues: function(next) {
             async.map(issueKeys, function(issueKey, next) {
