@@ -1,316 +1,300 @@
 'use strict';
-/* globals require, module */
 
-var request = require('request');
-var async = require.main.require('async');
-var winston = require.main.require('winston');
-var meta = require.main.require('./src/meta');
+const request = require('request-promise-native');
 
-var escape = require('escape-html');
-var striptags = require('striptags');
+const winston = require.main.require('winston');
+const meta = require.main.require('./src/meta');
+const utils = require.main.require('./src/utils');
 
-var issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm,
-    commitRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)@[A-Fa-f0-9]{7,}\b/gm,
-    fullUrlIssueRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/issues\/([\d]+)/g,
-    fullUrlPRRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/pull\/([\d]+)/g,
-    fullUrlCommitRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/commit\/([A-Fa-f0-9]{7,})/g,
-    Embed = {},
-    issueCache, commitCache, defaultRepo, personalAccessToken, appModule;
+const escape = require('escape-html');
+const striptags = require('striptags');
 
-Embed.init = function(data, callback) {
-    function render(req, res) {
-        res.render('admin/plugins/github-embed', {});
-    }
+const issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm;
+const commitRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)@[A-Fa-f0-9]{7,}\b/gm;
+const fullUrlIssueRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/issues\/([\d]+)/g;
+const fullUrlPRRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/pull\/([\d]+)/g;
+const fullUrlCommitRegex = /https:\/\/github.com\/([\w\d\-.]+\/[\w\d\-.]+)\/commit\/([A-Fa-f0-9]{7,})/g;
+let issueCache;
+let commitCache;
+let appModule;
 
-    appModule = data.router;
-    data.router.get('/admin/plugins/github-embed', data.middleware.admin.buildHeader, render);
-    data.router.get('/api/admin/plugins/github-embed', render);
+const Embed = module.exports;
 
-    callback();
+Embed.init = async ({ app, router, middleware }) => {
+	function render(req, res) {
+		res.render('admin/plugins/github-embed', {});
+	}
+
+	appModule = app;
+	router.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
+	router.get('/api/admin/plugins/github-embed', render);
+
+	const { cacheHours } = await meta.settings.get('github-embed');
+
+	issueCache = require('lru-cache')({
+		maxAge: 1000 * 60 * 60 * (cacheHours || 6),
+		max: 100,
+	});
+
+	commitCache = require('lru-cache')({
+		maxAge: 1000 * 60 * 60 * (cacheHours || 6),
+		max: 100,
+	});
 };
 
-Embed.buildMenu = function(custom_header, callback) {
-    custom_header.plugins.push({
-        'route': '/plugins/github-embed',
-        'icon': 'fa-github',
-        'name': 'GitHub Embed'
-    });
+Embed.buildMenu = function (custom_header, callback) {
+	custom_header.plugins.push({
+		route: '/plugins/github-embed',
+		icon: 'fa-github',
+		name: 'GitHub Embed',
+	});
 
-    callback(null, custom_header);
+	callback(null, custom_header);
 };
 
-Embed.parse = function(data, callback) {
-    var issueKeys = [],
-        commitKeys = [],
-        ltrimRegex = /^\s+/,
-        raw = typeof data !== 'object',
-        fullUrlIssueMatch = {},
-        fullUrlPRMatch = {},
-        fullUrlCommitMatch = {},
-        issueMatches, commitMatches, cleanedText;
+Embed.parse = async (data) => {
+	const issueKeys = [];
+	const commitKeys = [];
+	const ltrimRegex = /^\s+/;
+	const raw = typeof data !== 'object';
+	const fullUrlIssueMatch = {};
+	const fullUrlPRMatch = {};
+	const fullUrlCommitMatch = {};
 
-    cleanedText = striptags((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, ''));
-    issueMatches = cleanedText.match(issueRegex);
-    commitMatches = cleanedText.match(commitRegex);
+	const { defaultRepo } = await meta.settings.get('github-embed');
 
-    if (issueMatches && issueMatches.length) {
-        issueMatches.forEach(function(match) {
-            match = match.replace(ltrimRegex, '');
+	const cleanedText = striptags((raw ? data : data.postData.content).replace(/<blockquote>[\s\S]+?<\/blockquote>/g, ''));
+	const issueMatches = cleanedText.match(issueRegex);
+	const commitMatches = cleanedText.match(commitRegex);
 
-            if (match.slice(0, 2).toLowerCase() === 'gh') {
-                if (defaultRepo !== undefined) {
-                    match = defaultRepo + match.slice(2);
-                } else {
-                    // If a defaultRepo is not defined, skip this match.
-                    match = null;
-                }
-            }
+	if (issueMatches && issueMatches.length) {
+		issueMatches.forEach((match) => {
+			match = match.replace(ltrimRegex, '');
 
-            if (match !== null && issueKeys.indexOf(match) === -1) {
-                issueKeys.push(match);
-            }
-        });
-    }
+			if (match.slice(0, 2).toLowerCase() === 'gh') {
+				if (defaultRepo) {
+					match = defaultRepo + match.slice(2);
+				} else {
+					// If a defaultRepo is not defined, skip this match.
+					match = null;
+				}
+			}
 
-    while(fullUrlIssueMatch.obj = fullUrlIssueRegex.exec(cleanedText)) {
-        fullUrlIssueMatch.repo = fullUrlIssueMatch.obj[1];
-        fullUrlIssueMatch.issue = fullUrlIssueMatch.obj[2];
+			if (match !== null && issueKeys.indexOf(match) === -1) {
+				issueKeys.push(match);
+			}
+		});
+	}
 
-        issueKeys.push([fullUrlIssueMatch.repo, fullUrlIssueMatch.issue].join('#'));
-    }
+	// eslint-disable-next-line no-cond-assign
+	while (fullUrlIssueMatch.obj = fullUrlIssueRegex.exec(cleanedText)) {
+		fullUrlIssueMatch.repo = fullUrlIssueMatch.obj[1];
+		fullUrlIssueMatch.issue = fullUrlIssueMatch.obj[2];
 
-    while(fullUrlPRMatch.obj = fullUrlPRRegex.exec(cleanedText)) {
-        fullUrlPRMatch.repo = fullUrlPRMatch.obj[1];
-        fullUrlPRMatch.issue = fullUrlPRMatch.obj[2];
+		issueKeys.push([fullUrlIssueMatch.repo, fullUrlIssueMatch.issue].join('#'));
+	}
 
-        issueKeys.push([fullUrlPRMatch.repo, fullUrlPRMatch.issue].join('#'));
-    }
+	// eslint-disable-next-line no-cond-assign
+	while (fullUrlPRMatch.obj = fullUrlPRRegex.exec(cleanedText)) {
+		fullUrlPRMatch.repo = fullUrlPRMatch.obj[1];
+		fullUrlPRMatch.issue = fullUrlPRMatch.obj[2];
 
-    if (commitMatches && commitMatches.length) {
-        commitMatches.forEach(function(match) {
-            match = match.replace(ltrimRegex, '');
+		issueKeys.push([fullUrlPRMatch.repo, fullUrlPRMatch.issue].join('#'));
+	}
 
-            if (match.slice(0, 2).toLowerCase() === 'gh') {
-                if (defaultRepo !== undefined) {
-                    match = defaultRepo + match.slice(2);
-                } else {
-                    // If a defaultRepo is not defined, skip this match.
-                    match = null;
-                }
-            }
+	if (commitMatches && commitMatches.length) {
+		commitMatches.forEach((match) => {
+			match = match.replace(ltrimRegex, '');
 
-            if (match !== null && commitKeys.indexOf(match) === -1) {
-                commitKeys.push(match);
-            }
-        });
-    }
+			if (match.slice(0, 2).toLowerCase() === 'gh') {
+				if (defaultRepo !== undefined) {
+					match = defaultRepo + match.slice(2);
+				} else {
+					// If a defaultRepo is not defined, skip this match.
+					match = null;
+				}
+			}
 
-    while(fullUrlCommitMatch.obj = fullUrlCommitRegex.exec(cleanedText)) {
-        fullUrlCommitMatch.repo = fullUrlCommitMatch.obj[1];
-        fullUrlCommitMatch.commit = fullUrlCommitMatch.obj[2];
+			if (match !== null && commitKeys.indexOf(match) === -1) {
+				commitKeys.push(match);
+			}
+		});
+	}
 
-        commitKeys.push([fullUrlCommitMatch.repo, fullUrlCommitMatch.commit].join('@'));
-    }
+	// eslint-disable-next-line no-cond-assign
+	while (fullUrlCommitMatch.obj = fullUrlCommitRegex.exec(cleanedText)) {
+		fullUrlCommitMatch.repo = fullUrlCommitMatch.obj[1];
+		fullUrlCommitMatch.commit = fullUrlCommitMatch.obj[2];
 
-    async.parallel({
-        issues: function(next) {
-            async.map(issueKeys, function(issueKey, next) {
-                if (issueCache.has(issueKey)) {
-                    next(null, issueCache.get(issueKey));
-                } else {
-                    getIssueData(issueKey, function(err, issueObj) {
-                        if (err) {
-                            return next(err);
-                        }
+		commitKeys.push([fullUrlCommitMatch.repo, fullUrlCommitMatch.commit].join('@'));
+	}
 
-                        issueCache.set(issueKey, issueObj);
-                        next(err, issueObj);
-                    });
-                }
-            }, next);
-        },
-        commits: function(next) {
-            async.map(commitKeys, function(commitKey, next) {
-                if (commitCache.has(commitKey)) {
-                    next(null, commitCache.get(commitKey));
-                } else {
-                    getCommitData(commitKey, function(err, commitObj) {
-                        if (err) {
-                            return next(err);
-                        }
+	const payload = await utils.promiseParallel({
+		issues: Promise.all(issueKeys.map(async (issueKey) => {
+			if (issueCache.has(issueKey)) {
+				return issueCache.get(issueKey);
+			}
 
-                        commitCache.set(commitKey, commitObj);
-                        next(err, commitObj);
-                    });
-                }
-            }, next);
-        }
-    }, function(err, payload) {
-        if (!err) {
-            // Filter out non-existant issues
-            payload.issues = payload.issues.filter(Boolean);
-            payload.commits = payload.commits.filter(Boolean);
+			const issueObj = await Embed.getIssueData(issueKey);
+			issueCache.set(issueKey, issueObj);
+			return issueObj;
+		})),
+		commits: Promise.all(commitKeys.map(async (commitKey) => {
+			if (commitCache.has(commitKey)) {
+				return commitCache.get(commitKey);
+			}
 
-            var embeds = payload.issues.concat(payload.commits);
+			const commitObj = await Embed.getCommitData(commitKey);
+			commitCache.set(commitKey, commitObj);
+			return commitObj;
+		})),
+	});
 
-            if (embeds.length) {
-                appModule.render('partials/embed-block', {
-                    embeds: embeds
-                }, function(err, cardHTML) {
-                    if (raw) {
-                        data = data += cardHTML;
-                    } else {
-                        data.postData.content += cardHTML;
-                    }
-                    callback(null, data);
-                });
-            } else {
-                callback(null, data);
-            }
-        } else {
-            winston.warn('Encountered an error parsing GitHub embed codes, not continuing');
-            callback(null, data);
-        }
-    });
+	// Filter out non-existant issues
+	payload.issues = payload.issues.filter(Boolean);
+	payload.commits = payload.commits.filter(Boolean);
+
+	const embeds = payload.issues.concat(payload.commits);
+
+	if (embeds.length) {
+		const cardHTML = await appModule.renderAsync('partials/embed-block', {
+			embeds: embeds,
+		});
+
+		if (raw) {
+			data += cardHTML;
+		} else {
+			data.postData.content += cardHTML;
+		}
+	}
+
+	return data;
 };
 
-var getIssueData = function(issueKey, callback) {
-    var issueData = issueKey.split('#'),
-        repo = issueData[0],
-        issueNum = issueData[1],
-        reqOpts = {
-            url: 'https://api.github.com/repos/' + repo + '/issues/' + issueNum,
-            headers: {
-                'User-Agent': 'nodebb-plugin-github-embed'
-            }
-        };
+Embed.getIssueData = async (issueKey) => {
+	const issueData = issueKey.split('#');
+	const repo = issueData[0];
+	const issueNum = issueData[1];
+	const reqOpts = {
+		url: `https://api.github.com/repos/${repo}/issues/${issueNum}`,
+		json: true,
+		headers: {
+			'User-Agent': 'nodebb-plugin-github-embed',
+		},
+		resolveWithFullResponse: true,
+	};
+	const { clientId, clientSecret, personalAccessToken } = await meta.settings.get('github-embed');
 
-        if (personalAccessToken) {
-            reqOpts.auth = {
-                user: personalAccessToken,
-                pass: 'x-oauth-basic'
-            };
-        } else if (Embed.settings.clientId && Embed.settings.clientSecret) {
-            reqOpts.auth = {
-                user: Embed.settings.clientId,
-                pass: Embed.settings.clientSecret,
-            };
-        }
+	if (personalAccessToken) {
+		reqOpts.auth = {
+			user: personalAccessToken,
+			pass: 'x-oauth-basic',
+		};
+	} else if (clientId && clientSecret) {
+		reqOpts.auth = {
+			user: clientId,
+			pass: clientSecret,
+		};
+	}
 
-    request.get(reqOpts, function(err, response, body) {
-        if (err) {
-            return callback(err);
-        }
-        if (response && response.statusCode === 200) {
-            var issue = JSON.parse(body),
-                returnData = {
-                    type: {
-                        issue: true,
-                        commit: false
-                    },
-                    repo: repo,
-                    number: issue.number,
-                    url: issue.html_url,
-                    title: escape(issue.title),
-                    state: issue.state,
-                    // description: issue.body,
-                    created: issue.created_at,
-                    user: {
-                        login: issue.user.login,
-                        url: issue.user.html_url,
-                        picture: issue.user.avatar_url
-                    }
-                };
+	const { statusCode, body: issue } = await request.get(reqOpts);
 
-            callback(null, returnData);
-        } else if (response.statusCode === 404) {
-            winston.verbose('[plugins/github-embed] No matching issue ' + issueNum + ' in repository ' + repo);
-            callback();
-        } else if (response.statusCode === 410) {
-            winston.verbose('[plugins/github-embed] Issue ' + issueNum + ' in repository ' + repo + ' has been deleted.');
-            callback();
-        } else {
-            winston.warn('[plugins/github-embed] Received HTTP ' + response.statusCode + ' from GitHub (' + issueKey + ')');
-            callback();
-        }
-    });
+	switch (statusCode) {
+		case 200: {
+			const returnData = {
+				type: {
+					issue: true,
+					commit: false,
+				},
+				repo: repo,
+				number: issue.number,
+				url: issue.html_url,
+				title: escape(issue.title),
+				state: issue.state,
+				// description: issue.body,
+				created: issue.created_at,
+				user: {
+					login: issue.user.login,
+					url: issue.user.html_url,
+					picture: issue.user.avatar_url,
+				},
+			};
+
+			return returnData;
+		}
+
+		case 404: {
+			winston.verbose(`[plugins/github-embed] No matching issue ${issueNum} in repository ${repo}`);
+			break;
+		}
+
+		case 410: {
+			winston.verbose(`[plugins/github-embed] Issue ${issueNum} in repository ${repo} has been deleted.`);
+			break;
+		}
+
+		default: {
+			winston.warn(`[plugins/github-embed] Received HTTP ${statusCode} from GitHub (${issueKey})`);
+			break;
+		}
+	}
 };
 
-var getCommitData = function(commitKey, callback) {
-    var commitData = commitKey.split('@'),
-        repo = commitData[0],
-        hash = commitData[1],
-        reqOpts = {
-            url: 'https://api.github.com/repos/' + repo + '/commits/' + hash,
-            headers: {
-                'User-Agent': 'nodebb-plugin-github-embed'
-            }
-        };
+Embed.getCommitData = async (commitKey) => {
+	const commitData = commitKey.split('@');
+	const repo = commitData[0];
+	const hash = commitData[1];
+	const reqOpts = {
+		url: `https://api.github.com/repos/${repo}/commits/${hash}`,
+		json: true,
+		headers: {
+			'User-Agent': 'nodebb-plugin-github-embed',
+		},
+		resolveWithFullResponse: true,
+	};
+	const { clientId, clientSecret, personalAccessToken } = await meta.settings.get('github-embed');
 
-        if (personalAccessToken) {
-            reqOpts.auth = {
-                user: personalAccessToken,
-                pass: 'x-oauth-basic'
-            };
-        } else if (Embed.settings.clientId && Embed.settings.clientSecret) {
-            reqOpts.auth = {
-                user: Embed.settings.clientId,
-                pass: Embed.settings.clientSecret,
-            };
-        }
+	if (personalAccessToken) {
+		reqOpts.auth = {
+			user: personalAccessToken,
+			pass: 'x-oauth-basic',
+		};
+	} else if (clientId && clientSecret) {
+		reqOpts.auth = {
+			user: clientId,
+			pass: clientSecret,
+		};
+	}
 
-    request.get(reqOpts, function(err, response, body) {
-        if (err) {
-            return callback(err);
-        }
-        if (response && response.statusCode === 200) {
-            var commit = JSON.parse(body);
-            commit.author = commit.author || {};
+	const { statusCode, body } = await request.get(reqOpts);
 
-            var returnData = {
-                    type: {
-                        issue: false,
-                        commit: true
-                    },
-                    repo: repo,
-                    sha: commit.sha,
-                    url: commit.html_url,
-                    message: escape(commit.commit.message),
-                    created: commit.commit.author.date,
-                    commentCount: commit.commit.comment_count,
-                    user: {
-                        login: commit.author.login,
-                        url: commit.author.html_url,
-                        picture: commit.author.avatar_url
-                    }
-                };
+	switch (statusCode) {
+		case 200: {
+			const commit = body;
+			commit.author = commit.author || {};
 
-            callback(null, returnData);
-        } else if (response.statusCode === 404) {
-            winston.verbose('[plugins/github-embed] No matching commit ' + hash + ' in repository ' + repo);
-            callback();
-        }
-    });
+			return {
+				type: {
+					issue: false,
+					commit: true,
+				},
+				repo: repo,
+				sha: commit.sha,
+				url: commit.html_url,
+				message: escape(commit.commit.message),
+				created: commit.commit.author.date,
+				commentCount: commit.commit.comment_count,
+				user: {
+					login: commit.author.login,
+					url: commit.author.html_url,
+					picture: commit.author.avatar_url,
+				},
+			};
+		}
+
+		case 404: {
+			winston.verbose(`[plugins/github-embed] No matching commit ${hash} in repository ${repo}`);
+			break;
+		}
+	}
 };
-
-// Initial setup
-meta.settings.get('github-embed', function(err, settings) {
-    Embed.settings = settings;
-    defaultRepo = settings.defaultRepo;
-
-    issueCache = require('lru-cache')({
-        maxAge: 1000*60*60*(settings.cacheHours || 6),
-        max: 100
-    });
-
-    commitCache = require('lru-cache')({
-        maxAge: 1000*60*60*(settings.cacheHours || 6),
-        max: 100
-    });
-
-    if (settings.personalAccessToken) {
-        personalAccessToken = settings.personalAccessToken;
-    }
-});
-
-module.exports = Embed;

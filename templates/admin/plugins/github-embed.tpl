@@ -1,5 +1,5 @@
 <div class="row">
-	<div class="col-lg-9">
+	<div class="col-12">
 		<div class="card">
 			<div class="card-header">GitHub Embed</div>
 			<div class="card-body">
@@ -45,13 +45,6 @@
 			</div>
 		</div>
 	</div>
-
-	<div class="col-lg-3">
-		<div class="card">
-			<div class="card-header">Control Panel</div>
-			<div class="card-body">
-				<button class="btn btn-primary" id="save">Save Settings</button>
-			</div>
-		</div>
-	</div>
 </div>
+
+<!-- IMPORT admin/partials/save_button.tpl -->
