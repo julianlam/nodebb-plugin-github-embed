@@ -203,15 +203,16 @@ Embed.getIssueData = async (issueKey) => {
 		case 200: {
 			const returnData = {
 				type: {
-					issue: true,
+					issue: !issue.hasOwnProperty('pull_request'),
 					commit: false,
+					pr: issue.hasOwnProperty('pull_request'),
 				},
 				repo: repo,
 				number: issue.number,
 				url: issue.html_url,
 				title: escape(issue.title),
 				state: issue.state,
-				// description: issue.body,
+				draft: issue.hasOwnProperty('pull_request') ? issue.draft : null,
 				created: issue.created_at,
 				user: {
 					login: issue.user.login,
@@ -277,6 +278,7 @@ Embed.getCommitData = async (commitKey) => {
 				type: {
 					issue: false,
 					commit: true,
+					pr: false,
 				},
 				repo: repo,
 				sha: commit.sha,
