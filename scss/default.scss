@@ -3,7 +3,13 @@
 	margin-left: 0px;
 	margin-right: 0px;
 }
-
+.topic-list, .github-embed {
+	img.author-picture {
+		float: left;
+		width: 16px;
+		margin-right: 0.5em;
+	}
+}
 .github-embed {
 	font: 13px Helvetica, arial, freesans, clean, sans-serif;
 
@@ -57,9 +63,5 @@
 		}
 	}
 
-	img.author-picture {
-		float: left;
-		width: 16px;
-		margin-right: 0.5em;
-	}
+
 }
