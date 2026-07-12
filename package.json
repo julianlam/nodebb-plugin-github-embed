@@ -7,6 +7,9 @@
     "type": "git",
     "url": "https://github.com/julianlam/nodebb-plugin-github-embed"
   },
+  "scripts": {
+    "lint": "eslint ."
+  },
   "keywords": [
     "nodebb",
     "plugin",
@@ -19,17 +22,16 @@
   },
   "dependencies": {
     "escape-html": "^1.0.3",
-    "eslint-config-nodebb": "0.1.1",
     "lru-cache": "^2.5.0",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.9",
     "striptags": "^3.1.0"
   },
   "nbbpm": {
-    "compatibility": "^3.0.0"
+    "compatibility": "^4.14.0"
   },
   "devDependencies": {
-    "eslint": "8.x",
-    "eslint-plugin-import": "2.x"
+    "eslint": "10.7.0",
+    "eslint-config-nodebb": "2.0.3"
   }
 }

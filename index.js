@@ -1,13 +1,13 @@
 'use strict';
 
 const request = require('request-promise-native');
-
-const winston = require.main.require('winston');
-const meta = require.main.require('./src/meta');
-const utils = require.main.require('./src/utils');
-
 const escape = require('escape-html');
 const striptags = require('striptags');
+
+const winston = nodebb.require('winston');
+const meta = nodebb.require('./src/meta');
+const utils = nodebb.require('./src/utils');
+const routeHelpers = nodebb.require('./src/routes/helpers');
 
 const issueRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)#\d+\b/gm;
 const commitRegex = /(?:^|[\s])(?:[\w\d\-.]+\/[\w\d\-.]+|gh|GH)@[A-Fa-f0-9]{7,}\b/gm;
@@ -20,14 +20,13 @@ let appModule;
 
 const Embed = module.exports;
 
-Embed.init = async ({ app, router, middleware }) => {
-	function render(req, res) {
-		res.render('admin/plugins/github-embed', {});
-	}
-
+Embed.init = async ({ app, router }) => {
 	appModule = app;
-	router.get('/admin/plugins/github-embed', middleware.admin.buildHeader, render);
-	router.get('/api/admin/plugins/github-embed', render);
+	routeHelpers.setupAdminPageRoute(router, '/admin/plugins/github-embed', function render(req, res) {
+		res.render('admin/plugins/github-embed', {
+			title: 'GitHub Embed',
+		});
+	});
 
 	const { cacheHours } = await meta.settings.get('github-embed');
 
@@ -42,14 +41,13 @@ Embed.init = async ({ app, router, middleware }) => {
 	});
 };
 
-Embed.buildMenu = function (custom_header, callback) {
+Embed.buildMenu = function (custom_header) {
 	custom_header.plugins.push({
 		route: '/plugins/github-embed',
 		icon: 'fa-github',
 		name: 'GitHub Embed',
 	});
-
-	callback(null, custom_header);
+	return custom_header;
 };
 
 Embed.parse = async (data) => {
